@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛢️ Vehicle Oil Change Tracker Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .status-connected { background-color: #4CAF50; }
+        .status-disconnected { background-color: #f44336; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #444;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .card-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .odometer-card .card-value { color: #3498db; }
+        .service-card .card-value { color: #e74c3c; }
+        .remaining-card .card-value { color: #27ae60; }
+        .location-card .card-value { font-size: 1.5rem; color: #9b59b6; }
+
+        .progress-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background-color: #ecf0f1;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 15px;
+            transition: width 0.5s ease, background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .status-ok { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+        .status-approaching { background: linear-gradient(90deg, #f39c12, #e67e22); }
+        .status-soon { background: linear-gradient(90deg, #e67e22, #d35400); }
+        .status-overdue { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+
+        .gps-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .last-updated {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .clock-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .clock-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .clock-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .clock-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .clock-time {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .clock-date {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin: 50px 0;
+        }
+
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card-value {
+                font-size: 2rem;
+            }
+        }
+
+        .refresh-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+            margin: 0 5px;
+        }
+
+        .refresh-btn:hover {
+            background: #2980b9;
+        }
+
+        .reset-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+            margin: 0 5px;
+        }
+
+        .reset-btn:hover {
+            background: #c0392b;
+        }
+
+        .reset-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .modal-content h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .modal-content p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .confirm-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .confirm-btn:hover {
+            background: #229954;
+        }
+
+        .cancel-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .cancel-btn:hover {
+            background: #7f8c8d;
+        }
+
+        .success-message {
+            background: #27ae60;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .reset-info {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .reset-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .reset-stat {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .reset-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .reset-stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛢️ Vehicle Oil Change Tracker</h1>
+            <p>Real-time Vehicle Status Dashboard</p>
+            <span id="connection-status">
+                Connecting<span class="status-indicator status-disconnected"></span>
+            </span>
+            <div style="margin-top: 15px;">
+                <button class="refresh-btn" onclick="loadVehicleData()">🔄 Refresh</button>
+                <button class="reset-btn" id="reset-btn" onclick="showResetModal()">🛢️ Oil Change Reset</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            🔄 Loading vehicle data...
+        </div>
+
+        <div id="error-message" class="error" style="display: none;"></div>
+
+        <div id="dashboard" style="display: none;">
+            <div class="dashboard-grid">
+                <div class="card odometer-card">
+                    <div class="card-title">🚗 Current Odometer</div>
+                    <div class="card-value" id="current-odo">--</div>
+                    <div class="card-subtitle">Total Miles</div>
+                </div>
+
+                <div class="card service-card">
+                    <div class="card-title">🔧 Miles Since Service</div>
+                    <div class="card-value" id="miles-since">--</div>
+                    <div class="card-subtitle">Since Last Oil Change</div>
+                </div>
+
+                <div class="card remaining-card">
+                    <div class="card-title">⏳ Service Remaining</div>
+                    <div class="card-value" id="service-remaining">--</div>
+                    <div class="card-subtitle">Miles Until Next Service</div>
+                </div>
+
+                <div class="card location-card">
+                    <div class="card-title">📍 Current Location</div>
+                    <div class="card-value" id="current-location">--</div>
+                    <div class="card-subtitle">Last Known Position</div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <h3>🛢️ Service Interval Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                    <div class="progress-text" id="progress-text">0%</div>
+                </div>
+                <p><strong>Next Service:</strong> <span id="next-service">--</span> miles</p>
+                <p><strong>Status:</strong> <span id="service-status">--</span></p>
+            </div>
+
+            <div class="gps-section">
+                <h3>📊 Vehicle Statistics</h3>
+                <p><strong>Trip Miles:</strong> <span id="trip-miles">--</span> mi</p>
+                <p><strong>Service Interval:</strong> 25,000 miles</p>
+                <p><strong>Last Oil Change:</strong> <span id="last-oil-change">--</span> miles</p>
+                <p><strong>GPS Coordinates:</strong> <span id="gps-coords">--</span></p>
+            </div>
+
+            <div class="clock-section" style="margin-top: 30px;">
+                <h3>🕐 Current Time</h3>
+                <div class="clock-container">
+                    <div class="clock-item">
+                        <div class="clock-label">Local Time</div>
+                        <div class="clock-time" id="local-time">--:--</div>
+                        <div class="clock-date" id="local-date">-- -- --</div>
+                    </div>
+                    <div class="clock-item">
+                        <div class="clock-label">Charlotte, NC</div>
+                        <div class="clock-time" id="charlotte-time">--:--</div>
+                        <div class="clock-date" id="charlotte-date">-- -- --</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="last-updated">
+            Last updated: <span id="last-updated">Never</span>
+        </div>
+
+        <div id="success-message" class="success-message">
+            ✅ Oil change reset successfully! Service interval has been reset to 25,000 miles.
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div id="reset-modal" class="modal">
+        <div class="modal-content">
+            <h2>🛢️ Oil Change Service Reset</h2>
+            <p>Are you sure you want to reset the oil change service interval?</p>
+            
+            <div class="reset-info">
+                <h3>Current Status:</h3>
+                <div class="reset-stats">
+                    <div class="reset-stat">
+                        <div class="reset-stat-value" id="modal-current-odo">--</div>
+                        <div class="reset-stat-label">Current Odometer</div>
+                    </div>
+                    <div class="reset-stat">
+                        <div class="reset-stat-value" id="modal-miles-since">--</div>
+                        <div class="reset-stat-label">Miles Since Last Service</div>
+                    </div>
+                </div>
+                
+                <p><strong>This will:</strong></p>
+                <ul style="text-align: left; margin: 10px 0;">
+                    <li>✅ Reset "Last Oil Change" to current odometer</li>
+                    <li>✅ Set "Miles Since Service" to 0</li>
+                    <li>✅ Set "Service Remaining" to 25,000 miles</li>
+                    <li>✅ Log this service in history</li>
+                </ul>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="confirm-btn" onclick="confirmReset()">✅ Confirm Reset</button>
+                <button class="cancel-btn" onclick="closeResetModal()">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, onSnapshot, updateDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCsd6sSP2wwOwP5s_4_TbrTdzaXkU66e4g",
+            authDomain: "raspberrygps-36044.firebaseapp.com",
+            databaseURL: "https://raspberrygps-36044-default-rtdb.firebaseio.com",
+            projectId: "raspberrygps-36044",
+            storageBucket: "raspberrygps-36044.firebasestorage.app",
+            messagingSenderId: "858712924772",
+            appId: "1:858712924772:web:0d8278c4440d150149f571",
+            measurementId: "G-08YW1WSTQJ"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Global variables
+        let vehicleData = null;
+        let isConnected = false;
+
+        // DOM elements
+        const elements = {
+            loading: document.getElementById('loading'),
+            dashboard: document.getElementById('dashboard'),
+            error: document.getElementById('error-message'),
+            connectionStatus: document.getElementById('connection-status'),
+            currentOdo: document.getElementById('current-odo'),
+            milesSince: document.getElementById('miles-since'),
+            serviceRemaining: document.getElementById('service-remaining'),
+            currentLocation: document.getElementById('current-location'),
+            progressFill: document.getElementById('progress-fill'),
+            progressText: document.getElementById('progress-text'),
+            nextService: document.getElementById('next-service'),
+            serviceStatus: document.getElementById('service-status'),
+            tripMiles: document.getElementById('trip-miles'),
+            lastOilChange: document.getElementById('last-oil-change'),
+            gpsCoords: document.getElementById('gps-coords'),
+            lastUpdated: document.getElementById('last-updated'),
+            resetBtn: document.getElementById('reset-btn'),
+            resetModal: document.getElementById('reset-modal'),
+            successMessage: document.getElementById('success-message'),
+            modalCurrentOdo: document.getElementById('modal-current-odo'),
+            modalMilesSince: document.getElementById('modal-miles-since'),
+            localTime: document.getElementById('local-time'),
+            localDate: document.getElementById('local-date'),
+            charlotteTime: document.getElementById('charlotte-time'),
+            charlotteDate: document.getElementById('charlotte-date')
+        };
+
+        // Update clocks
+        function updateClocks() {
+            const now = new Date();
+            
+            // Local time
+            const localTimeStr = now.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            const localDateStr = now.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+            
+            // Charlotte, NC time (Eastern Time)
+            const charlotteTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+            const charlotteTimeStr = charlotteTime.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            const charlotteDateStr = charlotteTime.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+            
+            // Update display
+            elements.localTime.textContent = localTimeStr;
+            elements.localDate.textContent = localDateStr;
+            elements.charlotteTime.textContent = charlotteTimeStr;
+            elements.charlotteDate.textContent = charlotteDateStr;
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            const statusElement = elements.connectionStatus;
+            const indicator = statusElement.querySelector('.status-indicator');
+            
+            if (connected) {
+                statusElement.innerHTML = 'Connected <span class="status-indicator status-connected"></span>';
+            } else {
+                statusElement.innerHTML = 'Disconnected <span class="status-indicator status-disconnected"></span>';
+            }
+        }
+
+        // Format numbers with commas
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // Get status color class
+        function getStatusClass(status) {
+            switch(status?.toLowerCase()) {
+                case 'ok': return 'status-ok';
+                case 'approaching': return 'status-approaching';
+                case 'soon': return 'status-soon';
+                case 'urgent':
+                case 'overdue': return 'status-overdue';
+                default: return 'status-ok';
+            }
+        }
+
+        // Update the dashboard with vehicle data
+        function updateDashboard(data) {
+            console.log('Updating dashboard with data:', data);
+
+            // Update basic values
+            elements.currentOdo.textContent = formatNumber(Math.round(data.current_odo || 0));
+            elements.milesSince.textContent = formatNumber(Math.round(data.miles_since_service || 0));
+            elements.serviceRemaining.textContent = formatNumber(Math.round(data.service_remaining || 0));
+            elements.tripMiles.textContent = (data.trip_miles || 0).toFixed(1);
+            elements.lastOilChange.textContent = formatNumber(data.last_oil_change_odo || 0);
+            elements.nextService.textContent = formatNumber(data.next_service_odo || 0);
+            elements.serviceStatus.textContent = data.status || 'Unknown';
+
+            // Update location
+            if (data.last_position && Array.isArray(data.last_position) && data.last_position.length >= 2) {
+                const lat = data.last_position[0].toFixed(6);
+                const lon = data.last_position[1].toFixed(6);
+                elements.gpsCoords.textContent = `${lat}, ${lon}`;
+                elements.currentLocation.textContent = "Loading location...";
+                
+                // Try to get location name (you could integrate with a geocoding service here)
+                reverseGeocode(lat, lon);
+            } else {
+                elements.gpsCoords.textContent = 'No GPS data';
+                elements.currentLocation.textContent = 'Unknown';
+            }
+
+            // Update progress bar
+            const progress = Math.min(100, Math.max(0, ((data.miles_since_service || 0) / 25000) * 100));
+            elements.progressFill.style.width = `${progress}%`;
+            elements.progressText.textContent = `${Math.round(progress)}%`;
+            elements.progressFill.className = `progress-fill ${getStatusClass(data.status)}`;
+
+            // Update last updated time
+            elements.lastUpdated.textContent = new Date().toLocaleString();
+
+            // Enable/disable reset button based on data availability
+            elements.resetBtn.disabled = !data.current_odo || data.current_odo <= 0;
+
+            // Show dashboard, hide loading
+            elements.loading.style.display = 'none';
+            elements.dashboard.style.display = 'block';
+            elements.error.style.display = 'none';
+            elements.successMessage.style.display = 'none';
+        }
+
+        // Simple reverse geocoding with state abbreviations
+        async function reverseGeocode(lat, lon) {
+            try {
+                const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+                const data = await response.json();
+                
+                let city = data.city || data.locality || '';
+                let state = data.principalSubdivision || '';
+                
+                // Abbreviate US states
+                const stateAbbreviations = {
+                    'Pennsylvania': 'PA', 'North Carolina': 'NC', 'California': 'CA',
+                    'Texas': 'TX', 'Florida': 'FL', 'New York': 'NY',
+                    'Illinois': 'IL', 'Ohio': 'OH', 'Georgia': 'GA',
+                    'Michigan': 'MI', 'Virginia': 'VA', 'Washington': 'WA',
+                    'Arizona': 'AZ', 'Colorado': 'CO', 'Nevada': 'NV',
+                    'Oregon': 'OR', 'Utah': 'UT', 'Maryland': 'MD',
+                    'New Jersey': 'NJ', 'Massachusetts': 'MA', 'Connecticut': 'CT',
+                    'Delaware': 'DE', 'Rhode Island': 'RI', 'Vermont': 'VT',
+                    'New Hampshire': 'NH', 'Maine': 'ME', 'Tennessee': 'TN',
+                    'Kentucky': 'KY', 'Indiana': 'IN', 'Wisconsin': 'WI',
+                    'Minnesota': 'MN', 'Iowa': 'IA', 'Missouri': 'MO',
+                    'Arkansas': 'AR', 'Louisiana': 'LA', 'Mississippi': 'MS',
+                    'Alabama': 'AL', 'South Carolina': 'SC', 'West Virginia': 'WV',
+                    'Kansas': 'KS', 'Nebraska': 'NE', 'Oklahoma': 'OK',
+                    'North Dakota': 'ND', 'South Dakota': 'SD', 'Montana': 'MT',
+                    'Wyoming': 'WY', 'Idaho': 'ID', 'Alaska': 'AK', 'Hawaii': 'HI'
+                };
+                
+                // Abbreviate state if it's a US state
+                if (data.countryName === 'United States of America' || data.countryName === 'United States') {
+                    state = stateAbbreviations[state] || state;
+                }
+                
+                let location = 'Unknown';
+                if (city && state) {
+                    location = `${city}, ${state}`;
+                } else if (city) {
+                    location = city;
+                } else if (state) {
+                    location = state;
+                }
+                
+                elements.currentLocation.textContent = location;
+            } catch (error) {
+                console.error('Geocoding error:', error);
+                elements.currentLocation.textContent = 'Location unavailable';
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            elements.error.textContent = message;
+            elements.error.style.display = 'block';
+            elements.loading.style.display = 'none';
+            elements.dashboard.style.display = 'none';
+        }
+
+        // Load vehicle data from Firestore
+        async function loadVehicleData() {
+            try {
+                console.log('Loading vehicle data...');
+                elements.loading.style.display = 'block';
+                
+                const docRef = doc(db, 'vehicles', 'vehicle_001');
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    vehicleData = docSnap.data();
+                    console.log('Vehicle data loaded:', vehicleData);
+                    updateDashboard(vehicleData);
+                    updateConnectionStatus(true);
+                } else {
+                    throw new Error('Vehicle document not found');
+                }
+            } catch (error) {
+                console.error('Error loading vehicle data:', error);
+                showError(`Failed to load vehicle data: ${error.message}`);
+                updateConnectionStatus(false);
+            }
+        }
+
+        // Set up real-time listener
+        function setupRealtimeListener() {
+            const docRef = doc(db, 'vehicles', 'vehicle_001');
+            
+            const unsubscribe = onSnapshot(docRef, (doc) => {
+                if (doc.exists()) {
+                    vehicleData = doc.data();
+                    console.log('Real-time update received:', vehicleData);
+                    updateDashboard(vehicleData);
+                    updateConnectionStatus(true);
+                } else {
+                    showError('Vehicle document not found');
+                    updateConnectionStatus(false);
+                }
+            }, (error) => {
+                console.error('Real-time listener error:', error);
+                showError(`Connection error: ${error.message}`);
+                updateConnectionStatus(false);
+            });
+
+            return unsubscribe;
+        }
+
+        // Show reset confirmation modal
+        function showResetModal() {
+            if (!vehicleData) {
+                showError('No vehicle data available for reset');
+                return;
+            }
+
+            // Update modal with current data
+            elements.modalCurrentOdo.textContent = formatNumber(Math.round(vehicleData.current_odo || 0));
+            elements.modalMilesSince.textContent = formatNumber(Math.round(vehicleData.miles_since_service || 0));
+            
+            elements.resetModal.style.display = 'block';
+        }
+
+        // Close reset modal
+        function closeResetModal() {
+            elements.resetModal.style.display = 'none';
+        }
+
+        // Confirm oil change reset
+        async function confirmReset() {
+            try {
+                if (!vehicleData) {
+                    throw new Error('No vehicle data available');
+                }
+
+                console.log('Performing oil change reset...');
+                
+                const currentOdo = vehicleData.current_odo || 0;
+                const previousOilChangeOdo = vehicleData.last_oil_change_odo || 0;
+                const milesDriven = currentOdo - previousOilChangeOdo;
+
+                // Update vehicle document
+                const docRef = doc(db, 'vehicles', 'vehicle_001');
+                await updateDoc(docRef, {
+                    last_oil_change_odo: currentOdo,
+                    miles_since_service: 0,
+                    service_remaining: 25000,
+                    next_service_odo: Math.round(currentOdo + 25000),
+                    status: 'OK',
+                    last_updated: serverTimestamp()
+                });
+
+                // Log service history
+                const serviceHistoryRef = collection(db, 'service_history');
+                await addDoc(serviceHistoryRef, {
+                    vehicle_id: 'vehicle_001',
+                    service_type: 'oil_change',
+                    odometer: currentOdo,
+                    previous_service_odo: previousOilChangeOdo,
+                    miles_driven: milesDriven,
+                    service_interval: 25000,
+                    reset_method: 'web_dashboard',
+                    timestamp: serverTimestamp(),
+                    notes: 'Oil change reset via web dashboard'
+                });
+
+                console.log('Oil change reset completed successfully');
+
+                // Close modal and show success message
+                closeResetModal();
+                elements.successMessage.style.display = 'block';
+                
+                // Hide success message after 5 seconds
+                setTimeout(() => {
+                    elements.successMessage.style.display = 'none';
+                }, 5000);
+
+                // Refresh data
+                await loadVehicleData();
+
+            } catch (error) {
+                console.error('Error resetting oil change:', error);
+                showError(`Failed to reset oil change: ${error.message}`);
+                closeResetModal();
+            }
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            if (event.target === elements.resetModal) {
+                closeResetModal();
+            }
+        }
+
+        // Make functions available globally
+        window.loadVehicleData = loadVehicleData;
+        window.showResetModal = showResetModal;
+        window.closeResetModal = closeResetModal;
+        window.confirmReset = confirmReset;
+
+        // Initialize the dashboard
+        console.log('Initializing dashboard...');
+        setupRealtimeListener();
+        loadVehicleData();
+        
+        // Update clocks immediately and then every second
+        updateClocks();
+        setInterval(updateClocks, 1000);
+    </script>
+</body>
+</html>
