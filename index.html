@@ -93,6 +93,8 @@
         .service-card .card-value { color: #e74c3c; }
         .remaining-card .card-value { color: #27ae60; }
         .location-card .card-value { font-size: 1.5rem; color: #9b59b6; }
+        .speed-card .card-value { color: #f39c12; }
+        .gps-card .card-value { font-size: 1.8rem; color: #16a085; }
 
         .progress-section {
             background: rgba(255, 255, 255, 0.95);
@@ -135,13 +137,63 @@
         .status-ok { background: linear-gradient(90deg, #27ae60, #2ecc71); }
         .status-approaching { background: linear-gradient(90deg, #f39c12, #e67e22); }
         .status-soon { background: linear-gradient(90deg, #e67e22, #d35400); }
-        .status-overdue { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .status-urgent { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .status-overdue { background: linear-gradient(90deg, #8e44ad, #9b59b6); }
 
         .gps-section {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
             padding: 25px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .gps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .gps-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .gps-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .gps-value {
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+
+        .gps-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .gps-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .gps-searching {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .gps-inactive {
+            background: #f8d7da;
+            color: #721c24;
         }
 
         .last-updated {
@@ -218,6 +270,10 @@
             
             .card-value {
                 font-size: 2rem;
+            }
+
+            .clock-container {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -415,10 +471,22 @@
                     <div class="card-subtitle">Miles Until Next Service</div>
                 </div>
 
+                <div class="card speed-card">
+                    <div class="card-title">🚗 Current Speed</div>
+                    <div class="card-value" id="current-speed">--</div>
+                    <div class="card-subtitle">Miles per Hour</div>
+                </div>
+
                 <div class="card location-card">
                     <div class="card-title">📍 Current Location</div>
                     <div class="card-value" id="current-location">--</div>
                     <div class="card-subtitle">Last Known Position</div>
+                </div>
+
+                <div class="card gps-card">
+                    <div class="card-title">🛰️ GPS Status</div>
+                    <div class="card-value" id="gps-status">--</div>
+                    <div class="card-subtitle">Satellite Reception</div>
                 </div>
             </div>
 
@@ -434,10 +502,32 @@
 
             <div class="gps-section">
                 <h3>📊 Vehicle Statistics</h3>
-                <p><strong>Trip Miles:</strong> <span id="trip-miles">--</span> mi</p>
-                <p><strong>Service Interval:</strong> 25,000 miles</p>
-                <p><strong>Last Oil Change:</strong> <span id="last-oil-change">--</span> miles</p>
-                <p><strong>GPS Coordinates:</strong> <span id="gps-coords">--</span></p>
+                <div class="gps-grid">
+                    <div class="gps-item">
+                        <div class="gps-label">Trip Miles</div>
+                        <div class="gps-value" id="trip-miles">-- mi</div>
+                    </div>
+                    <div class="gps-item">
+                        <div class="gps-label">Service Interval</div>
+                        <div class="gps-value">25,000 miles</div>
+                    </div>
+                    <div class="gps-item">
+                        <div class="gps-label">Last Oil Change</div>
+                        <div class="gps-value" id="last-oil-change">-- miles</div>
+                    </div>
+                    <div class="gps-item">
+                        <div class="gps-label">GPS Coordinates</div>
+                        <div class="gps-value" id="gps-coords">--</div>
+                    </div>
+                    <div class="gps-item">
+                        <div class="gps-label">GPS Fix Quality</div>
+                        <div class="gps-value" id="gps-quality">--</div>
+                    </div>
+                    <div class="gps-item">
+                        <div class="gps-label">Satellites Used</div>
+                        <div class="gps-value" id="satellites-used">--</div>
+                    </div>
+                </div>
             </div>
 
             <div class="clock-section" style="margin-top: 30px;">
@@ -535,7 +625,9 @@
             currentOdo: document.getElementById('current-odo'),
             milesSince: document.getElementById('miles-since'),
             serviceRemaining: document.getElementById('service-remaining'),
+            currentSpeed: document.getElementById('current-speed'),
             currentLocation: document.getElementById('current-location'),
+            gpsStatus: document.getElementById('gps-status'),
             progressFill: document.getElementById('progress-fill'),
             progressText: document.getElementById('progress-text'),
             nextService: document.getElementById('next-service'),
@@ -543,6 +635,8 @@
             tripMiles: document.getElementById('trip-miles'),
             lastOilChange: document.getElementById('last-oil-change'),
             gpsCoords: document.getElementById('gps-coords'),
+            gpsQuality: document.getElementById('gps-quality'),
+            satellitesUsed: document.getElementById('satellites-used'),
             lastUpdated: document.getElementById('last-updated'),
             resetBtn: document.getElementById('reset-btn'),
             resetModal: document.getElementById('reset-modal'),
@@ -595,7 +689,6 @@
         function updateConnectionStatus(connected) {
             isConnected = connected;
             const statusElement = elements.connectionStatus;
-            const indicator = statusElement.querySelector('.status-indicator');
             
             if (connected) {
                 statusElement.innerHTML = 'Connected <span class="status-indicator status-connected"></span>';
@@ -615,9 +708,27 @@
                 case 'ok': return 'status-ok';
                 case 'approaching': return 'status-approaching';
                 case 'soon': return 'status-soon';
-                case 'urgent':
+                case 'urgent': return 'status-urgent';
                 case 'overdue': return 'status-overdue';
                 default: return 'status-ok';
+            }
+        }
+
+        // Get GPS status text and class
+        function getGpsStatusInfo(data) {
+            if (data.gps_active && data.last_position) {
+                const quality = data.gps_fix_quality || 0;
+                const satellites = data.satellites_used || 0;
+                
+                if (quality >= 2 && satellites >= 4) {
+                    return { text: `Active (${satellites} sats)`, class: 'gps-active' };
+                } else if (quality >= 1) {
+                    return { text: `Basic Fix (${satellites} sats)`, class: 'gps-searching' };
+                } else {
+                    return { text: 'Poor Signal', class: 'gps-searching' };
+                }
+            } else {
+                return { text: 'Searching...', class: 'gps-inactive' };
             }
         }
 
@@ -629,10 +740,22 @@
             elements.currentOdo.textContent = formatNumber(Math.round(data.current_odo || 0));
             elements.milesSince.textContent = formatNumber(Math.round(data.miles_since_service || 0));
             elements.serviceRemaining.textContent = formatNumber(Math.round(data.service_remaining || 0));
-            elements.tripMiles.textContent = (data.trip_miles || 0).toFixed(1);
-            elements.lastOilChange.textContent = formatNumber(data.last_oil_change_odo || 0);
+            elements.tripMiles.textContent = (data.trip_miles || 0).toFixed(1) + ' mi';
+            elements.lastOilChange.textContent = formatNumber(data.last_oil_change_odo || 0) + ' miles';
             elements.nextService.textContent = formatNumber(data.next_service_odo || 0);
-            elements.serviceStatus.textContent = data.status || 'Unknown';
+            elements.serviceStatus.textContent = data.display_status || data.service_status || 'Unknown';
+
+            // Update speed
+            const speed = data.current_speed || 0;
+            elements.currentSpeed.textContent = speed.toFixed(1);
+
+            // Update GPS status
+            const gpsInfo = getGpsStatusInfo(data);
+            elements.gpsStatus.innerHTML = `${gpsInfo.text} <span class="gps-status ${gpsInfo.class}">●</span>`;
+
+            // Update GPS details
+            elements.gpsQuality.textContent = data.gps_fix_quality || 'Unknown';
+            elements.satellitesUsed.textContent = data.satellites_used || 'Unknown';
 
             // Update location
             if (data.last_position && Array.isArray(data.last_position) && data.last_position.length >= 2) {
@@ -641,7 +764,7 @@
                 elements.gpsCoords.textContent = `${lat}, ${lon}`;
                 elements.currentLocation.textContent = "Loading location...";
                 
-                // Try to get location name (you could integrate with a geocoding service here)
+                // Try to get location name
                 reverseGeocode(lat, lon);
             } else {
                 elements.gpsCoords.textContent = 'No GPS data';
@@ -652,7 +775,7 @@
             const progress = Math.min(100, Math.max(0, ((data.miles_since_service || 0) / 25000) * 100));
             elements.progressFill.style.width = `${progress}%`;
             elements.progressText.textContent = `${Math.round(progress)}%`;
-            elements.progressFill.className = `progress-fill ${getStatusClass(data.status)}`;
+            elements.progressFill.className = `progress-fill ${getStatusClass(data.service_status)}`;
 
             // Update last updated time
             elements.lastUpdated.textContent = new Date().toLocaleString();
@@ -731,7 +854,7 @@
                 console.log('Loading vehicle data...');
                 elements.loading.style.display = 'block';
                 
-                const docRef = doc(db, 'vehicles', 'vehicle_001');
+                const docRef = doc(db, 'vehicle_data', 'vehicle_001');
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
@@ -751,7 +874,7 @@
 
         // Set up real-time listener
         function setupRealtimeListener() {
-            const docRef = doc(db, 'vehicles', 'vehicle_001');
+            const docRef = doc(db, 'vehicle_data', 'vehicle_001');
             
             const unsubscribe = onSnapshot(docRef, (doc) => {
                 if (doc.exists()) {
@@ -805,13 +928,17 @@
                 const milesDriven = currentOdo - previousOilChangeOdo;
 
                 // Update vehicle document
-                const docRef = doc(db, 'vehicles', 'vehicle_001');
+                const docRef = doc(db, 'vehicle_data', 'vehicle_001');
                 await updateDoc(docRef, {
                     last_oil_change_odo: currentOdo,
                     miles_since_service: 0,
                     service_remaining: 25000,
                     next_service_odo: Math.round(currentOdo + 25000),
-                    status: 'OK',
+                    service_status: 'OK',
+                    display_status: 'OK',
+                    status_color: 'green',
+                    is_overdue: false,
+                    service_percentage: 0,
                     last_updated: serverTimestamp()
                 });
 
